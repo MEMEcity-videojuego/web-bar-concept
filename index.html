@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Taberna de Eldelbar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root{
+      --bg:#0b1020; --card:#0f172a; --ink:#e5e7eb; --muted:#9ca3af; --line:#1f2937;
+      --accent:#60a5fa; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,Arial,sans-serif;margin:0;background:linear-gradient(180deg,#0b1020,#0b1226);color:var(--ink)}
+    .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
+    h1{margin:0 0 12px;font-size:28px}
+    h2{margin:0 0 12px;font-size:20px}
+    .grid{display:grid;gap:12px}
+    .cols-2{grid-template-columns:1fr 1fr}
+    .cols-3{grid-template-columns:repeat(3,1fr)}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .pill{border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:13px;color:var(--ink)}
+    .btn{background:transparent;border:1px solid var(--accent);color:var(--ink);padding:10px 14px;border-radius:10px;cursor:pointer}
+    .btn.primary{background:var(--accent);color:#061428;border-color:var(--accent)}
+    .btn[disabled]{opacity:.5;cursor:not-allowed}
+    .opcion{border:1px solid var(--line);background:#0c1324;color:var(--ink);border-radius:999px;padding:6px 10px;cursor:pointer}
+    .opcion.activa{background:var(--accent);border-color:var(--accent);color:#061428}
+    .clientes{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+    .cliente{border:1px solid var(--line);border-radius:12px;padding:12px;background:#0d152b;cursor:pointer;transition:transform .06s}
+    .cliente.sel{outline:2px solid var(--accent)}
+    .cliente.muerto{opacity:.55;filter:saturate(.6)}
+    .hp, .shield{height:8px;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+    .hp>div{height:100%;background:var(--ok)}
+    .shield>div{height:100%;background:var(--warn)}
+    .log{height:200px;overflow:auto;background:#091227;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:ui-monospace,Consolas,monospace;font-size:13px;white-space:pre-wrap}
+    .contador{min-width:36px;text-align:center;display:inline-block}
+    .badge{font-size:12px;opacity:.9}
+    .muted{color:var(--muted)}
+    .list{display:grid;gap:8px}
+    .item{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px;background:#0c1324}
+    .item .left{display:flex;gap:8px;align-items:center}
+    .item .name{font-weight:600}
+    .money{color:#94f58f}
+    /* Modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:16px}
+    .modal .box{background:var(--card);border:1px solid var(--line);border-radius:14px;max-width:680px;width:100%;padding:16px}
+    .choices{display:grid;gap:10px}
+    .toast{position:fixed;right:16px;bottom:16px;background:#0c1324;border:1px solid var(--line);padding:10px 12px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.25s}
+    .toast.show{opacity:1;transform:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Taberna de Eldelbar</h1>
+
+    <div id="pantalla-preparacion" class="card">
+      <h2>Preparación: compra cervezas y mejoras</h2>
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <span class="pill">Monedas: <b id="texto-monedas">10</b></span>
+          <span class="pill">Reputación: <b id="texto-reputacion">0</b></span>
+          <span class="pill">Doble tiro: <b id="texto-doble">0</b></span>
+          <span class="pill">Proveedor: <b id="texto-proveedor">No</b></span>
+          <span class="pill">Tirador auto: <b id="texto-auto">No</b></span>
+        </div>
+        <button id="boton-empezar" class="btn primary" disabled>Empezar ronda 1</button>
+      </div>
+
+      <h3 style="margin-top:12px">Tienda de cervezas</h3>
+      <div id="lista-tienda" class="list"></div>
+      <div class="row" style="margin-top:10px">
+        <span class="pill">Inventario: <span id="texto-inventario">vacío</span></span>
+      </div>
+
+      <h3 style="margin-top:16px">Mejoras</h3>
+      <div id="lista-mejoras" class="list"></div>
+    </div>
+
+    <div id="pantalla-ronda" class="card" style="display:none">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="texto-titulo-ronda">Ronda</h2>
+        <div class="row">
+          <span class="pill">Tiros: <b id="texto-tiros">0</b></span>
+          <span class="pill">Inventario: <span id="texto-inventario-ronda">—</span></span>
+          <span class="pill">Tiro actual: <b id="texto-tipo-tiro-actual">—</b></span>
+          <span class="pill">Doble tiro disp.: <b id="texto-doble-ronda">0</b></span>
+          <span class="pill">Monedas: <b id="texto-monedas-ronda">0</b></span>
+        </div>
+      </div>
+
+      <div style="margin:8px 0">
+        <div>Elige tipo para el tiro</div>
+        <div id="selector-tipo-tiro" class="row"></div>
+        <div class="row">
+          <button id="boton-usar-doble" class="btn">Usar doble tiro en el próximo lanzamiento</button>
+        </div>
+      </div>
+
+      <h3>Clientes</h3>
+      <div id="contenedor-clientes" class="clientes"></div>
+
+      <div class="row" style="margin-top:10px">
+        <button id="boton-lanzar" class="btn primary" disabled>Lanzar</button>
+        <button id="boton-siguiente-ronda" class="btn" style="display:none">Siguiente ronda</button>
+        <span class="pill" id="texto-estado-ronda"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Registro</h3>
+      <div id="contenedor-log" class="log"></div>
+    </div>
+  </div>
+
+  <div id="modal-recompensa" class="modal">
+    <div class="box">
+      <h3>¡Ronda superada! Elige una recompensa</h3>
+      <div id="contenedor-recompensas" class="choices"></div>
+      <div class="row" style="margin-top:10px;justify-content:flex-end">
+        <button id="boton-cerrar-modal" class="btn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="juego.js"></script>
+</body>
+</html>
